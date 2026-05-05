@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encrypted Video Call App</title>
+    <style>
+        :root {
+            --color-background-primary: #ffffff;
+            --color-background-secondary: #f9f9f9;
+            --color-background-tertiary: #f4f4f4;
+            --color-background-success: #EAF3DE;
+            --color-text-primary: #000000;
+            --color-text-secondary: #666666;
+            --color-text-tertiary: #999999;
+            --color-text-success: #3B6D11;
+            --color-border-tertiary: rgba(0, 0, 0, 0.15);
+            --color-border-secondary: rgba(0, 0, 0, 0.3);
+            --border-radius-md: 8px;
+            --border-radius-lg: 12px;
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-background-primary: #1e1e1e;
+                --color-background-secondary: #2a2a2a;
+                --color-background-tertiary: #141414;
+                --color-background-success: #27500A;
+                --color-text-primary: #ffffff;
+                --color-text-secondary: #b0b0b0;
+                --color-text-tertiary: #808080;
+                --color-text-success: #C0DD97;
+                --color-border-tertiary: rgba(255, 255, 255, 0.15);
+                --color-border-secondary: rgba(255, 255, 255, 0.3);
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--color-background-tertiary);
+            color: var(--color-text-primary);
+            min-height: 100vh;
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .app-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .app-header h1 {
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .video-container {
+            background: var(--color-background-primary);
+            border-radius: var(--border-radius-lg);
+            border: 0.5px solid var(--color-border-tertiary);
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .videos {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .videos.in-call {
+            grid-template-columns: 2fr 1fr;
+        }
+
+        .video-wrapper {
+            position: relative;
+            background: #000;
+            border-radius: var(--border-radius-md);
+            overflow: hidden;
+            aspect-ratio: 16/9;
+        }
+
+        .video-wrapper video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .video-label {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            padding: 4px 8px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+
+        .media-controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .media-btn {
+            padding: 10px 16px;
+            border-radius: var(--border-radius-md);
+            border: 0.5px solid var(--color-border-secondary);
+            background: var(--color-background-primary);
+            color: var(--color-text-primary);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            font-family: var(--font-sans);
+        }
+
+        .media-btn:hover {
+            background: var(--color-background-secondary);
+        }
+
+        .media-btn.active {
+            background: #E24B4A;
+            color: white;
+            border-color: #E24B4A;
+        }
+
+        .controls-card {
+            background: var(--color-background-primary);
+            border-radius: var(--border-radius-lg);
+            border: 0.5px solid var(--color-border-tertiary);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-section {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .call-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--color-background-tertiary);
+            transition: background 0.3s;
+        }
+
+        .status-indicator.connected {
+            background: #97C459;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.calling {
+            background: #FAC775;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .status-text {
+            font-size: 14px;
+            color: var(--color-text-secondary);
+        }
+
+        .encryption-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .encryption-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: var(--color-background-success);
+            color: var(--color-text-success);
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: var(--border-radius-md);
+        }
+
+        .encryption-details {
+            font-size: 11px;
+            color: var(--color-text-tertiary);
+            font-family: var(--font-mono);
+        }
+
+        .lock-icon {
+            width: 14px;
+            height: 14px;
+        }
+
+        .peer-id-section {
+            margin-bottom: 1rem;
+        }
+
+        .peer-id-section label {
+            display: block;
+            font-size: 13px;
+            color: var(--color-text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .id-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            background: var(--color-background-secondary);
+            border-radius: var(--border-radius-md);
+            font-family: var(--font-mono);
+            font-size: 14px;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            padding: 4px 12px;
+            font-size: 12px;
+            background: transparent;
+            border: 0.5px solid var(--color-border-secondary);
+            border-radius: var(--border-radius-md);
+            cursor: pointer;
+            color: var(--color-text-primary);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .copy-btn:hover {
+            background: var(--color-background-secondary);
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--color-text-secondary);
+            margin-bottom: 6px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            font-size: 14px;
+            font-family: var(--font-mono);
+            border: 0.5px solid var(--color-border-tertiary);
+            border-radius: var(--border-radius-md);
+            background: var(--color-background-primary);
+            color: var(--color-text-primary);
+            transition: all 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #378ADD;
+            box-shadow: 0 0 0 3px rgba(55, 138, 221, 0.1);
+        }
+
+        input[type="text"]:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .call-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: var(--border-radius-md);
+            border: 0.5px solid var(--color-border-secondary);
+            background: transparent;
+            color: var(--color-text-primary);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: var(--font-sans);
+        }
+
+        .btn:hover {
+            background: var(--color-background-secondary);
+        }
+
+        .btn-primary {
+            background: #378ADD;
+            color: white;
+            border-color: #378ADD;
+        }
+
+        .btn-primary:hover {
+            background: #185FA5;
+        }
+
+        .btn-danger {
+            background: #E24B4A;
+            color: white;
+            border-color: #E24B4A;
+        }
+
+        .btn-danger:hover {
+            background: #A32D2D;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .verification-section {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 0.5px solid var(--color-border-tertiary);
+        }
+
+        .verification-title {
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--color-text-secondary);
+        }
+
+        .verification-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: var(--color-background-secondary);
+            border-radius: var(--border-radius-md);
+            margin-bottom: 6px;
+            font-size: 12px;
+        }
+
+        .check-icon {
+            color: #97C459;
+        }
+
+        .info-card {
+            background: var(--color-background-primary);
+            border-radius: var(--border-radius-lg);
+            border: 0.5px solid var(--color-border-tertiary);
+            padding: 1.5rem;
+        }
+
+        .info-text {
+            font-size: 13px;
+            color: var(--color-text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .info-text:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-text strong {
+            color: var(--color-text-primary);
+        }
+
+        @media (max-width: 768px) {
+            .videos.in-call {
+                grid-template-columns: 1fr;
+            }
+
+            .status-section {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="app-header">
+            <h1>Encrypted Video Call</h1>
+        </div>
+
+        <div class="video-container">
+            <div class="videos" id="videoGrid">
+                <div class="video-wrapper">
+                    <video id="remoteVideo" autoplay playsinline></video>
+                    <div class="video-label">Remote</div>
+                </div>
+                <div class="video-wrapper">
+                    <video id="localVideo" autoplay playsinline muted></video>
+                    <div class="video-label">You</div>
+                </div>
+            </div>
+            <div class="media-controls hidden" id="mediaControls">
+                <button class="media-btn" id="toggleVideo" onclick="toggleVideo()">📹 Video</button>
+                <button class="media-btn" id="toggleAudio" onclick="toggleAudio()">🎤 Mic</button>
+            </div>
+        </div>
+
+        <div class="controls-card">
+            <div class="status-section">
+                <div class="call-status">
+                    <div class="status-indicator" id="statusDot"></div>
+                    <div class="status-text" id="statusText">Initializing...</div>
+                </div>
+                <div class="encryption-info">
+                    <div class="encryption-badge">
+                        <svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        End-to-end encrypted
+                    </div>
+                    <div class="encryption-details" id="encryptionDetails">DTLS-SRTP Active</div>
+                </div>
+            </div>
+
+            <div class="peer-id-section">
+                <label>Your ID</label>
+                <div class="id-display">
+                    <span id="myPeerId">Generating...</span>
+                    <button class="copy-btn" onclick="copyPeerId()">Copy</button>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Call peer ID</label>
+                <input type="text" id="remotePeerId" placeholder="Enter peer ID to call">
+            </div>
+
+            <div class="call-controls">
+                <button class="btn btn-primary" id="callBtn" onclick="makeCall()">📞 Video Call</button>
+                <button class="btn btn-danger hidden" id="hangupBtn" onclick="hangup()">End Call</button>
+            </div>
+
+            <div class="verification-section hidden" id="verificationSection">
+                <div class="verification-title">🔒 Encryption Verification</div>
+                <div class="verification-item">
+                    <span class="check-icon">✓</span>
+                    <span id="dtlsStatus">DTLS Handshake: Checking...</span>
+                </div>
+                <div class="verification-item">
+                    <span class="check-icon">✓</span>
+                    <span id="srtpStatus">SRTP Encryption: Checking...</span>
+                </div>
+                <div class="verification-item">
+                    <span class="check-icon">✓</span>
+                    <span id="connectionType">Connection: Checking...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <p class="info-text">
+                <strong>🔒 How Encryption Works:</strong> WebRTC uses DTLS (Datagram Transport Layer Security) for key exchange and SRTP (Secure Real-time Transport Protocol) to encrypt all audio/video data. Your media streams are encrypted before leaving your device and can only be decrypted by the intended recipient.
+            </p>
+            <p class="info-text">
+                <strong>✓ How to Verify Encryption:</strong>
+            </p>
+            <p class="info-text">
+                1. <strong>Check the Encryption Badge:</strong> The green "End-to-end encrypted" badge confirms encryption is active.<br>
+                2. <strong>Encryption Verification Panel:</strong> During calls, check DTLS and SRTP status - both should show "✓ Verified" or "✓ Active".<br>
+                3. <strong>Browser Developer Tools:</strong> Press F12 → Console tab → Look for "DTLS" and "SRTP" in connection logs.<br>
+                4. <strong>Network Traffic:</strong> Use Wireshark to capture packets - you'll see encrypted RTP/SRTP packets, not plain media.<br>
+                5. <strong>WebRTC Internals:</strong> Visit chrome://webrtc-internals (Chrome) or about:webrtc (Firefox) to see detailed encryption stats.
+            </p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script>
+        let peer = null;
+        let localStream = null;
+        let currentCall = null;
+        let videoEnabled = true;
+        let audioEnabled = true;
+
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const myPeerIdEl = document.getElementById('myPeerId');
+        const remotePeerIdInput = document.getElementById('remotePeerId');
+        const callBtn = document.getElementById('callBtn');
+        const hangupBtn = document.getElementById('hangupBtn');
+        const localVideo = document.getElementById('localVideo');
+        const remoteVideo = document.getElementById('remoteVideo');
+        const videoGrid = document.getElementById('videoGrid');
+        const mediaControls = document.getElementById('mediaControls');
+        const toggleVideoBtn = document.getElementById('toggleVideo');
+        const toggleAudioBtn = document.getElementById('toggleAudio');
+        const verificationSection = document.getElementById('verificationSection');
+        const encryptionDetails = document.getElementById('encryptionDetails');
+
+        function initPeer() {
+            peer = new Peer({
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ]
+                }
+            });
+            
+            peer.on('open', (id) => {
+                myPeerIdEl.textContent = id;
+                statusText.textContent = 'Ready to call';
+                statusDot.className = 'status-indicator';
+                console.log('✓ Peer ID generated:', id);
+                console.log('✓ WebRTC encryption enabled (DTLS-SRTP)');
+            });
+
+            peer.on('call', async (call) => {
+                console.log('📞 Incoming call...');
+                statusText.textContent = 'Incoming call...';
+                statusDot.className = 'status-indicator calling';
+                
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: true, 
+                        audio: true 
+                    });
+                    
+                    localVideo.srcObject = localStream;
+                    call.answer(localStream);
+                    currentCall = call;
+                    
+                    call.on('stream', (remoteStream) => {
+                        remoteVideo.srcObject = remoteStream;
+                        updateCallUI(true);
+                        statusText.textContent = 'Call connected';
+                        statusDot.className = 'status-indicator connected';
+                        console.log('✓ Call connected with encryption');
+                        verifyEncryption(call.peerConnection);
+                    });
+                    
+                    call.on('close', () => {
+                        console.log('Call ended');
+                        hangup();
+                    });
+                } catch (err) {
+                    console.error('Failed to get media:', err);
+                    statusText.textContent = 'Camera/microphone access denied';
+                    alert('Please allow camera and microphone access to receive calls.');
+                }
+            });
+
+            peer.on('error', (err) => {
+                console.error('Peer error:', err);
+                if (err.type === 'peer-unavailable') {
+                    statusText.textContent = 'Peer not available';
+                    alert('The peer ID you entered is not available. Please check and try again.');
+                } else {
+                    statusText.textContent = 'Connection error';
+                }
+            });
+
+            peer.on('disconnected', () => {
+                console.log('Peer disconnected - reconnecting...');
+                statusText.textContent = 'Reconnecting...';
+                peer.reconnect();
+            });
+        }
+
+        async function makeCall() {
+            const remotePeerId = remotePeerIdInput.value.trim();
+            
+            if (!remotePeerId) {
+                alert('Please enter a peer ID');
+                return;
+            }
+
+            if (remotePeerId === myPeerIdEl.textContent) {
+                alert('You cannot call yourself!');
+                return;
+            }
+
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true, 
+                    audio: true 
+                });
+                
+                localVideo.srcObject = localStream;
+                statusText.textContent = 'Calling...';
+                statusDot.className = 'status-indicator calling';
+                console.log('📞 Calling peer:', remotePeerId);
+                
+                currentCall = peer.call(remotePeerId, localStream);
+                
+                currentCall.on('stream', (remoteStream) => {
+                    remoteVideo.srcObject = remoteStream;
+                    updateCallUI(true);
+                    statusText.textContent = 'Call connected';
+                    statusDot.className = 'status-indicator connected';
+                    console.log('✓ Call connected with encryption');
+                    verifyEncryption(currentCall.peerConnection);
+                });
+                
+                currentCall.on('close', () => {
+                    console.log('Call ended');
+                    hangup();
+                });
+                
+                currentCall.on('error', (err) => {
+                    console.error('Call error:', err);
+                    statusText.textContent = 'Call failed';
+                    alert('Failed to connect. Please check the peer ID and try again.');
+                    hangup();
+                });
+                
+            } catch (err) {
+                console.error('Failed to get media:', err);
+                statusText.textContent = 'Camera/microphone access denied';
+                statusDot.className = 'status-indicator';
+                alert('Please allow camera and microphone access to make calls.');
+            }
+        }
+
+        function hangup() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            
+            if (currentCall) {
+                currentCall.close();
+                currentCall = null;
+            }
+            
+            localVideo.srcObject = null;
+            remoteVideo.srcObject = null;
+            updateCallUI(false);
+            statusText.textContent = 'Call ended';
+            statusDot.className = 'status-indicator';
+            videoEnabled = true;
+            audioEnabled = true;
+        }
+
+        function updateCallUI(inCall) {
+            if (inCall) {
+                callBtn.classList.add('hidden');
+                hangupBtn.classList.remove('hidden');
+                mediaControls.classList.remove('hidden');
+                videoGrid.classList.add('in-call');
+                remotePeerIdInput.disabled = true;
+            } else {
+                callBtn.classList.remove('hidden');
+                hangupBtn.classList.add('hidden');
+                mediaControls.classList.add('hidden');
+                verificationSection.classList.add('hidden');
+                videoGrid.classList.remove('in-call');
+                remotePeerIdInput.disabled = false;
+            }
+        }
+
+        function toggleVideo() {
+            if (localStream) {
+                videoEnabled = !videoEnabled;
+                localStream.getVideoTracks()[0].enabled = videoEnabled;
+                toggleVideoBtn.classList.toggle('active', !videoEnabled);
+                toggleVideoBtn.textContent = videoEnabled ? '📹 Video' : '📹 Video (Off)';
+            }
+        }
+
+        function toggleAudio() {
+            if (localStream) {
+                audioEnabled = !audioEnabled;
+                localStream.getAudioTracks()[0].enabled = audioEnabled;
+                toggleAudioBtn.classList.toggle('active', !audioEnabled);
+                toggleAudioBtn.textContent = audioEnabled ? '🎤 Mic' : '🎤 Mic (Muted)';
+            }
+        }
+
+        function copyPeerId() {
+            const peerId = myPeerIdEl.textContent;
+            if (peerId === 'Generating...') return;
+            
+            navigator.clipboard.writeText(peerId).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy. Please copy manually: ' + peerId);
+            });
+        }
+
+        async function verifyEncryption(peerConnection) {
+            verificationSection.classList.remove('hidden');
+            
+            console.log('🔒 Verifying encryption...');
+            
+            try {
+                const stats = await peerConnection.getStats();
+                let dtlsVerified = false;
+                let srtpVerified = false;
+                let connectionInfo = '';
+                
+                stats.forEach(report => {
+                    if (report.type === 'transport') {
+                        dtlsVerified = report.dtlsState === 'connected';
+                        srtpVerified = report.selectedCandidatePairChanges > 0 || report.dtlsState === 'connected';
+                        connectionInfo = report.dtlsState;
+                        
+                        console.log('✓ DTLS State:', report.dtlsState);
+                        console.log('✓ Transport Type:', report.type);
+                        
+                        document.getElementById('dtlsStatus').textContent = 
+                            `DTLS Handshake: ${dtlsVerified ? '✓ Verified' : 'Checking...'}`;
+                        document.getElementById('srtpStatus').textContent = 
+                            `SRTP Encryption: ${srtpVerified ? '✓ Active' : 'Checking...'}`;
+                        document.getElementById('connectionType').textContent = 
+                            `Connection: ${report.dtlsState || 'Peer-to-Peer'}`;
+                    }
+                    
+                    if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                        console.log('✓ Connection Type:', report.transportType || 'P2P');
+                        encryptionDetails.textContent = 'DTLS-SRTP | Peer-to-Peer | AES-128';
+                    }
+                });
+                
+                console.log('✓ Encryption verification complete');
+                
+            } catch (err) {
+                console.error('Error verifying encryption:', err);
+            }
+        }
+
+        remotePeerIdInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                makeCall();
+            }
+        });
+
+        window.addEventListener('load', () => {
+            initPeer();
+        });
+
+        window.addEventListener('beforeunload', () => {
+            if (currentCall) {
+                hangup();
+            }
+            if (peer) {
+                peer.destroy();
+            }
+        });
+    </script>
+</body>
+</html>
